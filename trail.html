@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Information Extraction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        
+        .required {
+            color: red;
+        }
+        
+        .buttons {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        button {
+            padding: 12px 24px;
+            margin: 0 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .extract-btn {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .extract-btn:hover {
+            background-color: #0056b3;
+        }
+        
+        .extract-btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .clear-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .clear-btn:hover {
+            background-color: #545b62;
+        }
+        
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            color: #007bff;
+            display: none;
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .results h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .json-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .logs {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .logs h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .log-container {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-info { color: #17a2b8; }
+        .log-success { color: #28a745; }
+        .log-warning { color: #ffc107; }
+        .log-error { color: #dc3545; }
+        
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .api-status {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .status-ready {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Asset Information Extraction System</h1>
+        
+        <div id="apiStatus" class="api-status">
+            <span id="statusText">Checking API status...</span>
+        </div>
+        
+        <form id="assetForm">
+            <div class="form-group">
+                <label for="modelNumber">Model Number <span class="required">*</span></label>
+                <input type="text" id="modelNumber" name="modelNumber" required 
+                       placeholder="e.g., MRN85HD" value="MRN85HD">
+            </div>
+            
+            <div class="form-group">
+                <label for="assetClassification">Asset Classification Name <span class="required">*</span></label>
+                <input type="text" id="assetClassification" name="assetClassification" required 
+                       placeholder="e.g., Generator (Marine)" value="Generator (Marine)">
+            </div>
+            
+            <div class="form-group">
+                <label for="manufacturer">Manufacturer (Optional)</label>
+                <input type="text" id="manufacturer" name="manufacturer" 
+                       placeholder="e.g., Cummins">
+            </div>
+            
+            <div class="form-group">
+                <label for="assetGuid">Asset Classification GUID2 (Optional)</label>
+                <input type="text" id="assetGuid" name="assetGuid" 
+                       placeholder="Optional GUID">
+            </div>
+            
+            <div class="buttons">
+                <button type="submit" class="extract-btn" id="extractBtn">
+                    Extract Asset Information
+                </button>
+                <button type="button" class="clear-btn" onclick="clearForm()">
+                    Clear Form
+                </button>
+            </div>
+        </form>
+        
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            Processing asset information...
+        </div>
+        
+        <div id="errorMessage" class="error-message"></div>
+        
+        <div id="results" class="results">
+            <h3>Extracted Information</h3>
+            <div id="jsonOutput" class="json-output"></div>
+        </div>
+        
+        <div id="logs" class="logs">
+            <h4>Processing Logs</h4>
+            <div id="logContainer" class="log-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://127.0.0.1:5500'; // Change this to your Flask server URL
+
+        // Global variables
+        let logs = [];
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAPIStatus();
+            setupFormHandlers();
+        });
+        
+        // Check if Flask API is available
+        async function checkAPIStatus() {
+            const statusElement = document.getElementById('apiStatus');
+            const statusText = document.getElementById('statusText');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                
+                if (data.status === 'healthy' && data.system_ready) {
+                    statusElement.className = 'api-status status-ready';
+                    statusText.textContent = '✅ API Ready - System initialized successfully';
+                } else {
+                    statusElement.className = 'api-status status-error';
+                    statusText.textContent = '⚠️ API Available but system not ready (check API keys)';
+                }
+            } catch (error) {
+                statusElement.className = 'api-status status-error';
+                statusText.textContent = '❌ API Not Available - Make sure Flask server is running on port 5000';
+            }
+        }
+        
+        // Setup form event handlers
+        function setupFormHandlers() {
+            const form = document.getElementById('assetForm');
+            form.addEventListener('submit', handleFormSubmit);
+        }
+        
+        // Handle form submission
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            // Clear previous results
+            clearResults();
+            
+            // Get form data
+            const formData = new FormData(event.target);
+            const inputData = {
+                model_number: formData.get('modelNumber').trim(),
+                asset_classification_name: formData.get('assetClassification').trim(),
+                manufacturer: formData.get('manufacturer').trim(),
+                asset_classification_guid2: formData.get('assetGuid').trim()
+            };
+            
+            // Validate required fields
+            if (!inputData.model_number || !inputData.asset_classification_name) {
+                showError('Model Number and Asset Classification Name are required');
+                return;
+            }
+            
+            // Show loading state
+            showLoading(true);
+            addLog('Starting asset extraction...', 'info');
+            addLog(`Model: ${inputData.model_number}`, 'info');
+            addLog(`Classification: ${inputData.asset_classification_name}`, 'info');
+            
+            try {
+                // Call API
+                const response = await fetch(`${API_BASE_URL}/extract`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(inputData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    addLog('Extraction completed successfully', 'success');
+                    showResults(result.data);
+                } else {
+                    addLog(`API Error: ${result.error}`, 'error');
+                    showError(result.error);
+                }
+                
+            } catch (error) {
+                addLog(`Request failed: ${error.message}`, 'error');
+                showError(`Failed to connect to API: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Utility functions
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            const button = document.getElementById('extractBtn');
+            
+            loading.style.display = show ? 'block' : 'none';
+            button.disabled = show;
+        }
+        
+        function showResults(data) {
+            const results = document.getElementById('results');
+            const jsonOutput = document.getElementById('jsonOutput');
+            
+            jsonOutput.textContent = JSON.stringify(data, null, 2);
+            results.style.display = 'block';
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        function clearResults() {
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            logs = [];
+            document.getElementById('logs').style.display = 'none';
+        }
+        
+        function clearForm() {
+            document.getElementById('assetForm').reset();
+            clearResults();
+            
+            // Reset to example values
+            document.getElementById('modelNumber').value = 'MRN85HD';
+            document.getElementById('assetClassification').value = 'Generator (Marine)';
+        }
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logs.push({ timestamp, message, type });
+            updateLogsDisplay();
+        }
+        
+        function updateLogsDisplay() {
+            const logsDiv = document.getElementById('logs');
+            const logContainer = document.getElementById('logContainer');
+            
+            if (logs.length > 0) {
+                logsDiv.style.display = 'block';
+                logContainer.innerHTML = logs.map(log => 
+                    `<div class="log-entry log-${log.type}">
+                        [${log.timestamp}] ${log.message}
+                    </div>`
+                            ).join('');
+                        }
+                    }
+                </script>
