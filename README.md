@@ -5,8 +5,11 @@ Features:
 
 Accepts input as JSON with fields like model_number, asset_classification_name, and manufacturer.
 Uses SERP API for web search.
+
 Uses Google Gemini for intelligent extraction and summarization.
+
 Returns clean, structured JSON output with fields such as classification, manufacturer, model number, product line, and summary.
+
 Includes retry and fallback mechanism if data is incomplete.
 
 Local Setup:
